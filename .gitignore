@@ -1,0 +1,22 @@
+# 에디터 / 에이전트
+.claude/
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# 배포
+.vercel/
+
+# 의존성 (현재 프로젝트는 외부 의존성 없음 — 추후 확장 대비)
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# 환경변수
+.env
+.env.*
+!.env.example

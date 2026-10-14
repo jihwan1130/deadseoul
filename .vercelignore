@@ -1,0 +1,7 @@
+.claude
+.vscode
+.idea
+.git
+node_modules
+*.md
+!README.md
