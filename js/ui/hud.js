@@ -426,7 +426,59 @@ DS.HUD = (function () {
   }
 
   let howtoBack = null;
-  function showHowto(back) { howtoBack = back || null; $('#howto').classList.remove('hidden'); }
+  function showHowto(back) { howtoBack = back || null; $('#howto').classList.remove('hidden'); menuSel['#howto'] = 0; }
+
+  /* -------------------------------------------------------------------------
+     오버레이 메뉴 — 키보드 전용 조작
+       위/아래(좌/우)로 이동, Space·Enter로 결정, Esc로 뒤로.
+       마우스 클릭도 그대로 동작하지만 어떤 메뉴도 마우스를 요구하지 않는다.
+     ------------------------------------------------------------------------- */
+  const MENUS = [
+    { id: '#howto',    pick: '.back' },
+    { id: '#cinema',   pick: '.cin-next' },
+    { id: '#gameover', pick: '.menu button' },
+    { id: '#pause',    pick: '.menu button' },
+    { id: '#title',    pick: '.menu button' }
+  ];
+  const menuSel = {};
+
+  function menuButtons(m) {
+    const root = $(m.id);
+    if (!root || root.classList.contains('hidden')) return null;
+    const btns = $$(m.id + ' ' + m.pick)
+      .filter(b => !b.disabled && !b.classList.contains('hidden'));
+    return btns.length ? btns : null;
+  }
+
+  /** 열려 있는 오버레이 메뉴의 키 입력을 처리. 처리했으면 true */
+  function menuKeys() {
+    if (panelOpen || DS.Dialogue.isActive()) return false;
+
+    for (const m of MENUS) {
+      const btns = menuButtons(m);
+      if (!btns) continue;
+
+      let i = menuSel[m.id] || 0;
+      i = ((i % btns.length) + btns.length) % btns.length;
+
+      let moved = false;
+      if (DS.Input.consume('up') || DS.Input.consume('left')) { i = (i - 1 + btns.length) % btns.length; moved = true; }
+      if (DS.Input.consume('down') || DS.Input.consume('right')) { i = (i + 1) % btns.length; moved = true; }
+      menuSel[m.id] = i;
+      for (let k = 0; k < btns.length; k++) btns[k].classList.toggle('on', k === i);
+      if (moved) DS.Audio.sfx('ui_move', { vol: 0.5 });
+
+      if (DS.Input.consume('confirm')) {
+        DS.Audio.sfx('ui_click');
+        btns[i].click();
+      } else if (DS.Input.consume('pause')) {
+        if (m.id === '#howto') $('#howto .back').click();
+        else if (m.id === '#pause') game.setPaused(false);
+      }
+      return true;
+    }
+    return false;
+  }
 
   function showTitle(hasSave) {
     $('#title').classList.remove('hidden');
@@ -438,14 +490,20 @@ DS.HUD = (function () {
     $('#dialogue').classList.add('hidden');
     const c = $('#title .menu button[data-act=continue]');
     c.disabled = !hasSave;
+    // 세이브가 있으면 "이어하기"에 커서를 둔다
+    menuSel['#title'] = hasSave ? 1 : 0;
   }
   function hideTitle() { $('#title').classList.add('hidden'); }
 
-  function showPause(v) { $('#pause').classList.toggle('hidden', !v); }
+  function showPause(v) {
+    $('#pause').classList.toggle('hidden', !v);
+    if (v) menuSel['#pause'] = 0;
+  }
 
   function showGameOver(cause) {
     $('#gameover').classList.remove('hidden');
     $('#gameover .cause').textContent = cause || '';
+    menuSel['#gameover'] = 0;
   }
   function hideGameOver() { $('#gameover').classList.add('hidden'); }
 
@@ -467,6 +525,7 @@ DS.HUD = (function () {
       btn.classList.remove('hidden');
       btn.textContent = opt.button || '계속';
       cinNext = opt.onNext;
+      menuSel['#cinema'] = 0;
     } else {
       btn.classList.add('hidden');
       cinNext = null;
@@ -481,17 +540,6 @@ DS.HUD = (function () {
 
   function hurtFlash(on) { $('#hud').classList.toggle('hurt', !!on); }
 
-  function crosshair(x, y, show) {
-    const c = $('#crosshair');
-    c.classList.toggle('hidden', !show);
-    if (!show) return;
-    const cv = $('#screen');
-    const r = cv.getBoundingClientRect();
-    const st = $('#stage').getBoundingClientRect();
-    c.style.left = (r.left - st.left + x / DS.VIEW_W * r.width) + 'px';
-    c.style.top = (r.top - st.top + y / DS.VIEW_H * r.height) + 'px';
-  }
-
   function loadingDone() { const l = $('#loading'); if (l) l.classList.add('hidden'); }
 
   return {
@@ -499,7 +547,7 @@ DS.HUD = (function () {
     prompt, hold, refreshHotbar, refreshEquip,
     openPanel, closePanel, isPanelOpen, refreshPanel, panelKeys,
     showTitle, hideTitle, showPause, showGameOver, hideGameOver, showHowto,
-    cinema, cinemaHide, hurtFlash, crosshair, loadingDone,
+    cinema, cinemaHide, hurtFlash, loadingDone, menuKeys,
     get tab() { return panelTab; }
   };
 })();

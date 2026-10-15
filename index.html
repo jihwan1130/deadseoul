@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#07080a">
 <title>DEAD:SEOUL — 1화 2호선</title>
+<link rel="preload" href="fonts/Galmuri11.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/Galmuri9.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -68,9 +70,6 @@
 
     <!-- 토스트 로그 -->
     <div id="toasts"></div>
-
-    <!-- 조준점 -->
-    <div id="crosshair" class="hidden"></div>
   </div>
 
   <!-- ===================== 대화창 ===================== -->
@@ -80,7 +79,7 @@
       <div class="who">—</div>
       <div class="line"></div>
       <div class="choices hidden"></div>
-      <div class="next">▼ <span>Space / 클릭</span></div>
+      <div class="next">▼ <span>SPACE</span></div>
     </div>
   </div>
 
@@ -124,15 +123,20 @@
   <!-- ===================== 타이틀 ===================== -->
   <div id="title">
     <div class="tv">
-      <h1><span class="dead">DEAD</span><span class="colon">:</span><span class="seoul">SEOUL</span></h1>
-      <div class="tagline">서울 · 감염 <b>D+0</b> · 02:14 KST</div>
+      <div class="plate">
+        <div class="hazard"></div>
+        <h1><span class="dead">DEAD</span><span class="colon">:</span><span class="seoul">SEOUL</span></h1>
+        <div class="tagline">서울 · 감염 <b>D+0</b> · 02:14 KST</div>
+        <div class="hazard"></div>
+      </div>
       <div class="ep">EPISODE 1 — <em>막차</em></div>
       <div class="menu">
         <button data-act="new">새 게임</button>
         <button data-act="continue" disabled>이어하기</button>
         <button data-act="howto">조작법</button>
       </div>
-      <div class="build">MVP PROTOTYPE v0.1 — vertical slice</div>
+      <div class="hint"><kbd>↑</kbd><kbd>↓</kbd> 선택 &nbsp;·&nbsp; <kbd>SPACE</kbd> 결정</div>
+      <div class="build">MVP PROTOTYPE v0.1 — KEYBOARD ONLY</div>
     </div>
   </div>
 
@@ -140,16 +144,19 @@
   <div id="howto" class="hidden">
     <div class="sheet">
       <h2>조작법</h2>
+      <p class="lede">이 게임은 <b>키보드만</b>으로 조작합니다. 마우스는 쓰지 않습니다.</p>
       <ul>
-        <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 또는 방향키 — 이동</li>
+        <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / <kbd>↑</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd> — 이동 <em>(누른 방향이 곧 바라보는 방향)</em></li>
+        <li><kbd>Q</kbd> <b>(누른 채)</b> — 제자리 조준 : 멈춰 서서 방향만 돌린다</li>
+        <li><kbd>Space</kbd> — 공격 (바라보는 방향으로 휘두름)</li>
         <li><kbd>Shift</kbd> — 달리기 (스태미나 소모 · 소음 발생)</li>
-        <li><kbd>마우스 좌클릭</kbd> / <kbd>Space</kbd> — 공격 (바라보는 방향으로 휘두름)</li>
         <li><kbd>E</kbd> — 상호작용 / 줍기 / 수색 (길게 누르는 작업도 있음)</li>
+        <li><kbd>R</kbd> — 보조 동작 (소화기 분사 등)</li>
         <li><kbd>1</kbd>~<kbd>5</kbd> — 핫바 슬롯 사용 / 장착</li>
-        <li><kbd>Tab</kbd> — 소지품, <kbd>C</kbd> — 제작, <kbd>F</kbd> — 휴대폰 손전등</li>
-        <li><kbd>Esc</kbd> — 일시정지</li>
+        <li><kbd>Tab</kbd> 소지품 &nbsp;·&nbsp; <kbd>C</kbd> 제작 &nbsp;·&nbsp; <kbd>F</kbd> 휴대폰 손전등</li>
+        <li><kbd>Esc</kbd> — 일시정지 &nbsp;·&nbsp; 메뉴는 <kbd>↑</kbd><kbd>↓</kbd>와 <kbd>Space</kbd></li>
       </ul>
-      <p class="tip">좀비는 <b>소리</b>에 반응합니다. 달리기와 문 개방은 큰 소음을 만듭니다. 등 뒤에서 치면 치명타.</p>
+      <p class="tip">발밑의 작은 점이 <b>바라보는 방향</b>입니다. 좀비는 <b>소리</b>에 반응합니다 — 달리기와 문 개방은 큰 소음을 만듭니다. 등 뒤에서 치면 치명타.</p>
       <button class="back">돌아가기</button>
     </div>
   </div>

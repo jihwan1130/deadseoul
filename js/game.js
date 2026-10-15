@@ -61,6 +61,10 @@ DS.Game = (function () {
     window.addEventListener('resize', resize);
     resize();
 
+    // 타이틀 배경으로 쓸 차량 내부를 미리 만들어 둔다 (비상등만 켠 상태)
+    buildWorld();
+    titleLights();
+
     DS.HUD.loadingDone();
     DS.HUD.showTitle(!!localStorage.getItem(SAVE_KEY));
 
@@ -143,9 +147,20 @@ DS.Game = (function () {
     refreshUI();
   }
 
+  /** 타이틀 배경 조명 — 전등은 끄고 비상등만. 어두운 차량이 천천히 패닝된다. */
+  function titleLights() {
+    if (!G.lights) return;
+    for (const l of G.lights) {
+      if (l.kind === 'main') { l.target = 0; l.int = 0; }
+      else if (l.kind === 'emer') { l.target = 1; l.int = 1; }
+      else { l.target = 0; l.int = 0; }
+    }
+  }
+
   function toTitle() {
     G.mode = 'title';
     G.paused = false;
+    titleLights();
     DS.Dialogue.stop();
     DS.HUD.closePanel();
     DS.HUD.cinemaHide();
@@ -168,7 +183,15 @@ DS.Game = (function () {
     G.time += dt;
 
     if (G.mode === 'title') {
+      DS.HUD.menuKeys();
       renderTitleBackdrop();
+      DS.Input.endFrame();
+      return;
+    }
+
+    // 오버레이 메뉴(일시정지/사망/조작법/연출)는 키보드로 조작한다
+    if (DS.HUD.menuKeys()) {
+      render();
       DS.Input.endFrame();
       return;
     }
@@ -799,10 +822,6 @@ DS.Game = (function () {
     // 화면 전사
     G.sctx.clearRect(0, 0, G.screen.width, G.screen.height);
     G.sctx.drawImage(G.buf, 0, 0, VW, VH, 0, 0, G.screen.width, G.screen.height);
-
-    // 조준점
-    const showCross = DS.Input.mouse.inside && !G.paused && !DS.HUD.isPanelOpen() && !DS.Dialogue.isActive() && G.mode === 'play';
-    DS.HUD.crosshair(DS.Input.mouse.x, DS.Input.mouse.y, showCross);
   }
 
   /** 타이틀 화면 배경: 어두운 차량 내부를 천천히 패닝 */

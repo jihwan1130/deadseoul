@@ -13,6 +13,18 @@ DS.FX = (function () {
   let nums = [];          // 데미지 숫자
   let shake = 0, shakeT = 0;
   let lightBuf = null, smokeBuf = null, grainTex = null;
+  let lightImg = null, ditherLUT = null;
+
+  /* 라이팅 도트화 — 빛을 N단계로 계단화한다.
+     부드러운 radial 그라데이션은 저해상도 픽셀 화면에서 "에어브러시"처럼
+     보이기 때문에, 계단으로 끊어야 도트 그림과 질감이 맞는다. 빛 웅덩이의
+     가장자리가 또렷한 띠로 끊기는 것이 여기서는 의도한 결과다.
+
+     디더(LIGHT_DITHER>0)는 쓰지 않는다. 순서 디더는 "평탄한 밝기"를
+     반드시 두 단계의 교차 패턴으로 만들기 때문에, 암부처럼 넓고 균일한
+     영역이 화면 전체 체커보드로 덮인다. 계단 띠보다 그쪽이 훨씬 나쁘다. */
+  const LIGHT_STEPS = 7;
+  const LIGHT_DITHER = 0;
 
   /* =========================================================================
      초기화
@@ -21,6 +33,45 @@ DS.FX = (function () {
     lightBuf = U.makeCanvas(VW, VH);
     smokeBuf = U.makeCanvas(VW, VH);
     grainTex = makeGrain(96);
+    buildDitherLUT();
+  }
+
+  /** LUT[bayer*256 + value] = 계단화된 값 — 프레임마다 나눗셈을 하지 않는다 */
+  function buildDitherLUT() {
+    const B = [            // 4x4 Bayer (0..15)
+       0,  8,  2, 10,
+      12,  4, 14,  6,
+       3, 11,  1,  9,
+      15,  7, 13,  5
+    ];
+    const step = 255 / (LIGHT_STEPS - 1);
+    ditherLUT = new Uint8Array(16 * 256);
+    for (let b = 0; b < 16; b++) {
+      // 진폭 0이면 순수 반올림(=띠), 1이면 완전 디더
+      const bias = 0.5 + ((B[b] + 0.5) / 16 - 0.5) * LIGHT_DITHER;
+      for (let v = 0; v < 256; v++) {
+        const q = Math.floor(v / step + bias) * step;
+        ditherLUT[b * 256 + v] = q < 0 ? 0 : (q > 255 ? 255 : Math.round(q));
+      }
+    }
+  }
+
+  /** 라이트 버퍼를 계단화 + 디더링 */
+  function ditherLightBuf(lc) {
+    if (!ditherLUT) return;
+    lightImg = lc.getImageData(0, 0, VW, VH);
+    const d = lightImg.data;
+    for (let y = 0; y < VH; y++) {
+      const brow = (y & 3) << 2;
+      let i = y * VW * 4;
+      for (let x = 0; x < VW; x++, i += 4) {
+        const base = (brow + (x & 3)) << 8;
+        d[i]     = ditherLUT[base + d[i]];
+        d[i + 1] = ditherLUT[base + d[i + 1]];
+        d[i + 2] = ditherLUT[base + d[i + 2]];
+      }
+    }
+    lc.putImageData(lightImg, 0, 0);
   }
 
   function makeGrain(size) {
@@ -325,6 +376,9 @@ DS.FX = (function () {
 
     lc.globalCompositeOperation = 'source-over';
 
+    // 빛을 도트화 — 이 한 단계가 "에어브러시 조명"을 "픽셀 조명"으로 바꾼다
+    ditherLightBuf(lc);
+
     c.globalCompositeOperation = 'multiply';
     c.drawImage(lightBuf.canvas, 0, 0);
     c.globalCompositeOperation = 'source-over';
@@ -351,10 +405,15 @@ DS.FX = (function () {
       c.globalAlpha = 1;
     }
 
-    // 비네트
+    // 비네트 — 색정지점을 겹쳐 계단형으로 (부드러운 띠 대신 도트 단계)
+    const vMax = 0.42 + (s.lowHp || 0) * 0.3;
     const g = c.createRadialGradient(VW / 2, VH / 2, VH * 0.26, VW / 2, VH / 2, VH * 0.92);
-    g.addColorStop(0, 'rgba(0,0,0,0)');
-    g.addColorStop(1, `rgba(0,0,0,${0.42 + (s.lowHp || 0) * 0.3})`);
+    for (let i = 0; i < 4; i++) {
+      const t0 = i / 4, t1 = (i + 1) / 4;
+      const a = (vMax * (i + 1)) / 4;
+      g.addColorStop(t0, `rgba(0,0,0,${a.toFixed(3)})`);
+      g.addColorStop(t1, `rgba(0,0,0,${a.toFixed(3)})`);
+    }
     c.fillStyle = g; c.fillRect(0, 0, VW, VH);
 
     // 저체력 적색 펄스

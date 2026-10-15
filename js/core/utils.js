@@ -73,6 +73,18 @@ DS.U = (function () {
     return dy < 0 ? 'up' : 'down';
   }
 
+  /** 임의 각도를 8방향 격자에 스냅 — 키보드 조준을 또렷하게 유지한다 */
+  function snapAngle8(a) {
+    const step = Math.PI / 4;
+    return wrapAngle(Math.round(wrapAngle(a) / step) * step);
+  }
+
+  /** a를 b쪽으로 최단호 회전 (프레임 독립) */
+  function rotToward(a, b, rate, dt) {
+    const d = wrapAngle(b - a);
+    return wrapAngle(a + d * (1 - Math.exp(-rate * dt)));
+  }
+
   function dirFromAngle(a) {
     const d = wrapAngle(a);
     if (d >= -Math.PI / 4 && d < Math.PI / 4) return 'right';
@@ -130,6 +142,6 @@ DS.U = (function () {
   return {
     clamp, lerp, sign, damp, approach, dist, dist2, wrapAngle, angleDiff, aabb,
     rng, rand, randInt, chance, pick, shuffle,
-    dirFromVec, dirFromAngle, shade, mix, makeCanvas, bus, fmt, mmss
+    dirFromVec, dirFromAngle, snapAngle8, rotToward, shade, mix, makeCanvas, bus, fmt, mmss
   };
 })();

@@ -333,63 +333,131 @@ DS.Stage1 = (function () {
   function decorate(map) {
     const c = map.bg.getContext('2d');
     c.imageSmoothingEnabled = false;
+    const dither = DS.Tiles.dither;
+    const noiseFill = DS.Tiles.noiseFill;
+    const ditherFade = DS.Tiles.ditherFade;
+    const bevel = DS.Tiles.bevel;
+    const rnd = U.rng(77731);
 
-    // 출입문 위 노선도 (각 승강구 중앙)
-    for (const d of DOORS) {
+    /* --- 출입문 위 노선도 + 출입문 번호 (각 승강구 중앙) --- */
+    DOORS.forEach((d, di) => {
       const cx = ((d[0] + d[1] + 1) / 2) * T;
       for (const wy of [1, 11]) {
-        const y = wy * T + (wy === 1 ? 11 : 1);
-        c.fillStyle = '#20242a'; c.fillRect(cx - 14, y, 28, 4);
-        c.fillStyle = '#2e3a45'; c.fillRect(cx - 13, y + 1, 26, 2);
-        // 2호선 초록 라인 + 역 점
-        c.fillStyle = '#3f9a6c'; c.fillRect(cx - 12, y + 2, 24, 1);
+        const y = wy * T + (wy === 1 ? 10 : 1);
+        // 액자
+        bevel(c, cx - 15, y, 30, 5, '#20242a', '#39414a', '#0d1013');
+        c.fillStyle = '#2b3642'; c.fillRect(cx - 14, y + 1, 28, 3);
+        // 2호선 초록 라인 + 역 점 (현재역만 흰색 + 1px 링)
+        c.fillStyle = '#3f9a6c'; c.fillRect(cx - 13, y + 2, 26, 1);
         for (let i = 0; i < 7; i++) {
-          c.fillStyle = i === 3 ? '#e8e4da' : '#9fb4a8';
-          c.fillRect(cx - 11 + i * 4, y + 1, 1, 2);
+          const sx = cx - 12 + i * 4;
+          c.fillStyle = i === 3 ? '#eef2f5' : '#86a394';
+          c.fillRect(sx, y + 1, 1, 2);
+          if (i === 3) { c.fillStyle = 'rgba(238,242,245,0.35)'; c.fillRect(sx - 1, y + 1, 1, 2); }
         }
+        // 출입문 번호
+        DS.Gfx.num(c, String(di + 1), cx + 13, y + (wy === 1 ? -4 : 7), '#7d858c', false);
       }
-    }
+    });
 
-    // 차량번호 표기 "5-4" (좌측 격벽)
-    c.fillStyle = '#20242a'; c.fillRect(1 * T + 2, 2 * T + 2, 13, 6);
-    c.fillStyle = '#d8d4c8';
+    /* --- 차량번호 표기 "5-4" (좌측 격벽) --- */
+    bevel(c, 1 * T + 1, 2 * T + 1, 15, 8, '#1b1f24', '#333b43', '#0a0c0f');
     DS.Gfx.num(c, '5', 1 * T + 6, 2 * T + 5, '#d8d4c8', false);
     c.fillStyle = '#9aa0a6'; c.fillRect(1 * T + 9, 2 * T + 5, 2, 1);
     DS.Gfx.num(c, '4', 1 * T + 13, 2 * T + 5, '#d8d4c8', false);
 
-    // 비상벨 (각 승강구 옆 벽)
+    /* --- 비상벨 + 소화기 픽토그램 (각 승강구 옆 벽) --- */
     for (const d of DOORS) {
       for (const wy of [1, 11]) {
-        const x = d[0] * T - 4, y = wy * T + (wy === 1 ? 4 : 7);
+        const x = d[0] * T - 5, y = wy * T + (wy === 1 ? 4 : 6);
         if (x < T) continue;
-        c.fillStyle = '#e8e4da'; c.fillRect(x, y, 4, 4);
-        c.fillStyle = '#b5181f'; c.fillRect(x + 1, y + 1, 2, 2);
+        // 비상벨 — 흰 바탕에 적색 버튼, 1px 테두리
+        c.fillStyle = '#0e1114'; c.fillRect(x - 1, y - 1, 7, 7);
+        c.fillStyle = '#e8e4da'; c.fillRect(x, y, 5, 5);
+        c.fillStyle = '#8e1219'; c.fillRect(x + 1, y + 1, 3, 3);
+        c.fillStyle = '#d4232e'; c.fillRect(x + 1, y + 1, 3, 1);
+        // 아래 라벨 1px
+        c.fillStyle = 'rgba(232,228,218,0.35)'; c.fillRect(x, y + 6, 5, 1);
       }
     }
 
-    // 좌석 위 수하물 선반 그림자 (상부)
-    const g = c.createLinearGradient(0, 2 * T, 0, 2 * T + 6);
-    g.addColorStop(0, 'rgba(0,0,0,0.3)'); g.addColorStop(1, 'rgba(0,0,0,0)');
-    c.fillStyle = g; c.fillRect(0, 2 * T, map.pxW, 6);
+    /* --- 좌석 위 수하물 선반 그림자 (상·하부) --- */
+    ditherFade(c, 0, 2 * T, map.pxW, 5, '#000000', 0.85, 'down');
+    ditherFade(c, 0, 10 * T + T - 5, map.pxW, 5, '#000000', 0.7, 'up');
 
-    // 선로 구역: 대피로 난간 + 케이블 트레이
+    /* --- 출입문 앞 바닥: 승차위치 화살표 + 마모 --- */
+    for (const d of DOORS) {
+      const cx = ((d[0] + d[1] + 1) / 2) * T;
+      for (const [fy, dir] of [[4 * T + 2, -1], [8 * T + 10, 1]]) {
+        // 황색 화살표 (문 쪽을 향함)
+        for (let i = 0; i < 4; i++) {
+          c.fillStyle = i < 2 ? '#8a6f1c' : '#b79326';
+          const w = 7 - i * 2;
+          c.fillRect(cx - (w >> 1), fy + (dir < 0 ? i : 3 - i), w, 1);
+        }
+        noiseFill(c, cx - 9, fy - 2, 18, 8, '#767d78', 0.2);
+      }
+    }
+
+    /* --- 관통문 주변: 긁힌 자국과 그래피티 한 점 --- */
+    for (const gx of [1 * T, (W - 2) * T]) {
+      for (let i = 0; i < 5; i++) {
+        c.fillStyle = 'rgba(0,0,0,0.3)';
+        c.fillRect(gx + ((rnd() * T) | 0), 4 * T + ((rnd() * (5 * T)) | 0), 2 + ((rnd() * 3) | 0), 1);
+      }
+    }
+    // 좌측 격벽 낙서 (적색 스프레이 한 줄)
+    c.fillStyle = 'rgba(164,18,27,0.55)';
+    c.fillRect(1 * T + 3, 9 * T + 4, 9, 1);
+    c.fillRect(1 * T + 3, 9 * T + 6, 6, 1);
+    c.fillRect(1 * T + 11, 9 * T + 2, 1, 5);
+
+    /* --- 선로 구역 --- */
     const ex0 = ESCAPE_X[0] * T, ex1 = (ESCAPE_X[1] + 1) * T;
-    c.fillStyle = '#4a5055'; c.fillRect(ex0, 14 * T + 9, ex1 - ex0, 2);
+    // 레일 2줄 — 바닥면 + 상단 반사 1px (침목 위에 올라앉은 것처럼)
+    const railAt = (ry) => {
+      c.fillStyle = '#2a2e32'; c.fillRect(ex0, ry + 2, ex1 - ex0, 1);
+      c.fillStyle = '#6a7177'; c.fillRect(ex0, ry, ex1 - ex0, 2);
+      c.fillStyle = '#b9c2c8'; c.fillRect(ex0, ry, ex1 - ex0, 1);
+      dither(c, ex0, ry + 1, ex1 - ex0, 1, '#2a2e32', 0.4);
+    };
+    railAt(13 * T + 2);
+    railAt(13 * T + 11);
+
+    // 대피로 난간 (하단) — 지주 + 상부 횡대
+    c.fillStyle = '#3a4046'; c.fillRect(ex0, 14 * T + 9, ex1 - ex0, 3);
     c.fillStyle = '#6a7278'; c.fillRect(ex0, 14 * T + 9, ex1 - ex0, 1);
     for (let x = ex0 + 4; x < ex1; x += 12) {
-      c.fillStyle = '#3a4046'; c.fillRect(x, 14 * T + 10, 2, 5);
+      c.fillStyle = '#2f343a'; c.fillRect(x, 14 * T + 11, 2, 5);
+      c.fillStyle = '#4a5055'; c.fillRect(x, 14 * T + 11, 1, 5);
     }
-    // 선로 레일 2줄
-    c.fillStyle = '#7d848a';
-    c.fillRect(ex0, 13 * T + 2, ex1 - ex0, 2);
-    c.fillRect(ex0, 13 * T + 11, ex1 - ex0, 2);
-    c.fillStyle = 'rgba(255,255,255,0.14)';
-    c.fillRect(ex0, 13 * T + 2, ex1 - ex0, 1);
-    c.fillRect(ex0, 13 * T + 11, ex1 - ex0, 1);
+    // 케이블 트레이 (선로 최하단)
+    c.fillStyle = '#1b1f23'; c.fillRect(ex0, 14 * T + 6, ex1 - ex0, 2);
+    c.fillStyle = '#2a3037'; c.fillRect(ex0, 14 * T + 6, ex1 - ex0, 1);
 
-    // 터널 벽 (y0) 케이블
-    c.fillStyle = '#16191d'; c.fillRect(0, 0 * T + 10, map.pxW, 2);
-    c.fillStyle = '#1e2226'; c.fillRect(0, 0 * T + 13, map.pxW, 1);
+    // 차량 밑 암부 — 선로 쪽에서 본 하부 차체 그림자
+    ditherFade(c, 0, 12 * T, map.pxW, 6, '#000000', 0.98, 'down');
+
+    /* --- 터널 벽 (y0) : 콘크리트 링 + 케이블 다발 + 거리 표지 --- */
+    for (let x = 0; x < map.pxW; x += 6 * T) {
+      dither(c, x, 0, 2, T, '#1d2226', 0.8);
+      c.fillStyle = '#23282d'; c.fillRect(x, 0, 1, T);
+    }
+    // 케이블 3줄 + 행거
+    c.fillStyle = '#14171b'; c.fillRect(0, 9, map.pxW, 2);
+    c.fillStyle = '#1f242a'; c.fillRect(0, 9, map.pxW, 1);
+    c.fillStyle = '#14171b'; c.fillRect(0, 12, map.pxW, 1);
+    c.fillStyle = '#191d22'; c.fillRect(0, 14, map.pxW, 1);
+    for (let x = 8; x < map.pxW; x += 4 * T) {
+      c.fillStyle = '#2b3237'; c.fillRect(x, 7, 2, 8);
+    }
+    // 거리 표지판 (녹색)
+    for (let x = 10 * T; x < map.pxW; x += 18 * T) {
+      c.fillStyle = '#0d1012'; c.fillRect(x - 1, 2, 12, 6);
+      c.fillStyle = '#23543a'; c.fillRect(x, 3, 10, 4);
+      c.fillStyle = '#5fa86b'; c.fillRect(x, 3, 10, 1);
+      c.fillStyle = 'rgba(224,236,228,0.5)'; c.fillRect(x + 2, 5, 6, 1);
+    }
   }
 
   /* =========================================================================

@@ -1,6 +1,11 @@
 /* =============================================================================
    DEAD:SEOUL — core/input.js
-   키보드(e.code 기반 → 한글 IME 영향 없음) / 마우스 / 터치
+   키보드(e.code 기반 → 한글 IME 영향 없음) / 터치
+
+   조작 원칙 — 게임플레이는 키보드만 사용한다.
+     · 방향 전환은 이동키로 한다 (8방향 스냅, actors.js에서 보간).
+     · 제자리에서 방향만 돌리려면 조준키(Q)를 누른 채 이동키를 누른다.
+     · 마우스는 게임플레이에 일절 관여하지 않는다. (메뉴 클릭만 보조로 허용)
    ============================================================================= */
 'use strict';
 
@@ -19,19 +24,19 @@ DS.Input = (function () {
     attack:   ['Space'],
     interact: ['KeyE'],
     alt:      ['KeyR'],      // 보조 동작 (소화기 분사 등)
+    aim:      ['KeyQ'],      // 제자리 조준 — 이동을 멈추고 방향만 돌린다
     inv:      ['Tab'],
     craft:    ['KeyC'],
     light:    ['KeyF'],
     pause:    ['Escape'],
+    confirm:  ['Enter', 'NumpadEnter', 'Space'],   // 메뉴 결정
     slot1:    ['Digit1'], slot2: ['Digit2'], slot3: ['Digit3'],
     slot4:    ['Digit4'], slot5: ['Digit5']
   };
 
-  const mouse = { x: 0, y: 0, wx: 0, wy: 0, down: false, clicked: false, inside: false };
   const touch = { active: false, mx: 0, my: 0, attack: false, interact: false, run: false };
 
   let enabled = true;      // 패널/대화 중에는 게임플레이 입력 차단
-  let swallowNext = false;
 
   function isDown(act) {
     const keys = BIND[act]; if (!keys) return false;
@@ -50,7 +55,7 @@ DS.Input = (function () {
     return hit;
   }
 
-  /** 이동 입력 벡터 (정규화) */
+  /** 이동/조준 입력 벡터 (정규화) */
   function moveVec() {
     let x = 0, y = 0;
     if (enabled) {
@@ -66,8 +71,10 @@ DS.Input = (function () {
   }
 
   const wantRun = () => enabled && (isDown('run') || touch.run);
-  const wantAttack = () => enabled && (isDown('attack') || mouse.down || touch.attack);
+  const wantAttack = () => enabled && (isDown('attack') || touch.attack);
   const wantInteractHold = () => enabled && (isDown('interact') || touch.interact);
+  /** 제자리 조준: 이동은 멈추고 이동키를 방향 전환으로만 쓴다 */
+  const wantAimHold = () => enabled && isDown('aim') && !touch.active;
 
   function init(canvas) {
     window.addEventListener('keydown', (e) => {
@@ -80,26 +87,17 @@ DS.Input = (function () {
       down.delete(e.code);
       released.add(e.code);
     });
-    window.addEventListener('blur', () => { down.clear(); mouse.down = false; });
+    window.addEventListener('blur', () => { down.clear(); });
 
-    canvas.addEventListener('mousemove', (e) => {
-      const r = canvas.getBoundingClientRect();
-      mouse.x = (e.clientX - r.left) / r.width * DS.VIEW_W;
-      mouse.y = (e.clientY - r.top) / r.height * DS.VIEW_H;
-      mouse.inside = true;
-    });
-    canvas.addEventListener('mouseleave', () => { mouse.inside = false; mouse.down = false; });
-    canvas.addEventListener('mousedown', (e) => {
-      if (e.button === 0) { mouse.down = true; mouse.clicked = true; }
-      if (e.button === 2) { pressed.add('KeyR'); }       // 우클릭 = 보조 동작
-    });
-    window.addEventListener('mouseup', (e) => { if (e.button === 0) mouse.down = false; });
+    // 캔버스에서 마우스는 메뉴 밖에서는 아무 역할도 하지 않는다.
+    // 우클릭 메뉴만 막아 둔다 (드래그/선택으로 포커스가 빠지는 것 방지).
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+    canvas.addEventListener('mousedown', (e) => e.preventDefault());
 
     initTouch();
   }
 
-  /* ---------------- 터치 (앱인토스 가로형 대비) ---------------- */
+  /* ---------------- 터치 (모바일 가로형) ---------------- */
   function initTouch() {
     const root = document.getElementById('touch');
     const stick = document.getElementById('tstick');
@@ -149,8 +147,6 @@ DS.Input = (function () {
       b.addEventListener('touchstart', on, { passive: false });
       b.addEventListener('touchend', off, { passive: false });
       b.addEventListener('touchcancel', off);
-      b.addEventListener('mousedown', on);
-      b.addEventListener('mouseup', off);
     });
 
     // 터치 기기면 컨트롤 노출
@@ -160,16 +156,14 @@ DS.Input = (function () {
   /** 프레임 끝에서 호출 — 소비형 상태 초기화 */
   function endFrame() {
     pressed.clear(); released.clear();
-    mouse.clicked = false;
-    if (swallowNext) { swallowNext = false; }
   }
 
   return {
     init, endFrame, isDown, wasPressed, consume, moveVec,
-    wantRun, wantAttack, wantInteractHold,
-    mouse, touch,
+    wantRun, wantAttack, wantInteractHold, wantAimHold,
+    touch,
     get enabled() { return enabled; },
-    set enabled(v) { enabled = v; if (!v) mouse.down = false; },
-    clear() { down.clear(); pressed.clear(); mouse.down = false; }
+    set enabled(v) { enabled = v; },
+    clear() { down.clear(); pressed.clear(); }
   };
 })();

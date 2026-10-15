@@ -89,7 +89,9 @@
       // --- 입력 ---
       const mv = DS.Input.moveVec();
       const busy = st.busy > 0 || this.holdTarget;
-      let ax = busy ? 0 : mv.x, ay = busy ? 0 : mv.y;
+      // 제자리 조준(Q): 이동은 멈추고 이동키를 방향 전환으로만 쓴다
+      const aimHold = DS.Input.wantAimHold() && !busy;
+      let ax = (busy || aimHold) ? 0 : mv.x, ay = (busy || aimHold) ? 0 : mv.y;
 
       this.running = !!(DS.Input.wantRun() && (ax || ay) && DS.Survival.canRun(st) && !busy);
       let spd = (this.running ? this.speedRun : this.speedWalk) * DS.Survival.speedMul(st);
@@ -115,20 +117,20 @@
       const sp = Math.hypot(this.vx, this.vy);
       this.moving = sp > 6;
 
-      // --- 조준 / 방향 ---
-      if (DS.Input.mouse.inside && !DS.Input.touch.active) {
-        const wx = DS.Input.mouse.x + game.camera.x;
-        const wy = DS.Input.mouse.y + game.camera.y;
-        this.aim = Math.atan2(wy - (this.y - 11), wx - this.x);
-      } else if (this.moving) {
-        this.aim = Math.atan2(this.vy, this.vx);
+      // --- 조준 / 방향 (키보드 전용) ---
+      // 누른 이동키 방향이 곧 조준 방향. 8방향으로 스냅한 뒤 최단호로 돌려
+      // 또렷하면서도 각도가 튀지 않게 한다.
+      if (mv.x || mv.y) {
+        const want = DS.Input.touch.active
+          ? Math.atan2(mv.y, mv.x)                      // 터치 스틱은 아날로그
+          : U.snapAngle8(Math.atan2(mv.y, mv.x));
+        // 제자리 조준은 즉각적으로, 스윙 중에는 거의 고정
+        const rate = this.swing ? 3 : (aimHold ? 30 : 17);
+        this.aim = U.rotToward(this.aim, want, rate, dt);
       }
       this.facingAngle = this.aim;
-      if (!this.swing) {
-        this.face = this.moving && !DS.Input.mouse.inside
-          ? U.dirFromVec(this.vx, this.vy)
-          : U.dirFromAngle(this.aim);
-      }
+      if (!this.swing) this.face = U.dirFromAngle(this.aim);
+      this.aimHold = aimHold;
 
       // --- 애니메이션 / 발소리 ---
       if (this.moving) {
@@ -175,6 +177,26 @@
       // 그림자
       c.fillStyle = 'rgba(0,0,0,0.35)';
       c.beginPath(); c.ellipse(sx, sy + 1, 6.2, 2.6, 0, 0, 7); c.fill();
+
+      // 방향 표시 — 조준점이 없으므로 발밑에 바라보는 쪽 픽셀 마커를 둔다.
+      // 제자리 조준(Q) 중에는 또렷하게 키워 "지금 돌리고 있다"를 알린다.
+      {
+        const hold = !!this.aimHold;
+        const r = hold ? 13 : 10;
+        const fx = sx + Math.cos(this.aim) * r;
+        const fy = sy + 1 + Math.sin(this.aim) * r * 0.55;
+        c.globalAlpha = hold ? 0.85 : 0.34;
+        c.fillStyle = hold ? '#e0a526' : '#cdd6dc';
+        const px = Math.round(fx), py = Math.round(fy);
+        c.fillRect(px - 1, py - 1, 2, 2);
+        if (hold) {
+          // 바라보는 방향으로 한 칸 더 — 짧은 꼬리
+          c.globalAlpha = 0.45;
+          c.fillRect(Math.round(fx - Math.cos(this.aim) * 3) - 1,
+                     Math.round(fy - Math.sin(this.aim) * 3 * 0.55) - 1, 2, 2);
+        }
+        c.globalAlpha = 1;
+      }
 
       // 피격 점멸
       const blink = this.invuln > 0 && (Math.floor(this.invuln * 22) % 2 === 0);
