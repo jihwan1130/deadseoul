@@ -69,16 +69,16 @@ DS.Combat = (function () {
     const s = p.swing;
     const wp = DS.Inventory.weapon(p.inv);
     const w = wp.w;
-    const ox = p.x, oy = p.y - 6;
+    const ox = p.x, oy = p.y - 11;
 
     let hits = 0;
     const maxHits = w.heavy ? 3 : 2;
 
     for (const z of game.zombies) {
       if (z.dead || hits >= maxHits) continue;
-      const d = U.dist(ox, oy, z.x, z.y - 6);
+      const d = U.dist(ox, oy, z.x, z.y - 11);
       if (d > w.range + 6) continue;
-      const a = Math.atan2(z.y - 6 - oy, z.x - ox);
+      const a = Math.atan2(z.y - 11 - oy, z.x - ox);
       if (U.angleDiff(a, s.angle) > w.arc / 2 + 0.12) continue;
       if (!game.map.hasLOS(ox, oy, z.x, z.y)) continue;
 
@@ -116,7 +116,7 @@ DS.Combat = (function () {
         if (broke) {
           game.toast(`<b>${wp.d.name}</b>이(가) 부러졌다.`, 'bad');
           DS.Audio.sfx('hit_metal', { vol: 0.8 });
-          DS.FX.debris(p.x, p.y - 8, '#9aa4aa', 8);
+          DS.FX.debris(p.x, p.y - 12, '#9aa4aa', 8);
         }
       }
     }
@@ -137,9 +137,9 @@ DS.Combat = (function () {
     z.vy += Math.sin(angle) * k;
     z.stagger(critKind ? 0.5 : 0.26);
 
-    DS.FX.blood(z.x, z.y - 7, angle, critKind ? 1.5 : 1, !!critKind);
+    DS.FX.blood(z.x, z.y - 12, angle, critKind ? 1.5 : 1, !!critKind);
     DS.FX.decalBlood(game.map, z.x + U.rand(-3, 3), z.y + U.rand(-2, 2), U.rand(3, 6), 0.35);
-    DS.FX.dmgNum(z.x, z.y - 16, dmg, critKind ? '#ffd27a' : '#ffffff');
+    DS.FX.dmgNum(z.x, z.y - 30, dmg, critKind ? '#ffd27a' : '#ffffff');
     DS.FX.doShake(critKind ? 2.4 : 1.3);
 
     if (critKind) {
@@ -157,7 +157,7 @@ DS.Combat = (function () {
     z.dead = true;
     z.deadT = 0;
     DS.Audio.sfxAt('z_die', z.x, z.y);
-    DS.FX.blood(z.x, z.y - 7, angle, 2.2, true);
+    DS.FX.blood(z.x, z.y - 12, angle, 2.2, true);
     DS.FX.decalBlood(game.map, z.x, z.y + 2, U.rand(8, 13), 0.7);
     DS.FX.doShake(2.0);
     game.stats.kills++;
@@ -181,7 +181,7 @@ DS.Combat = (function () {
     p.vy += Math.sin(a) * 70;
 
     DS.Audio.sfx(kind === 'bite' ? 'bite' : 'player_hurt', { vol: 0.9 });
-    DS.FX.blood(p.x, p.y - 8, a, 1.2, kind === 'bite');
+    DS.FX.blood(p.x, p.y - 12, a, 1.2, kind === 'bite');
     DS.FX.decalBlood(game.map, p.x, p.y + 2, U.rand(3, 6), 0.4);
     DS.FX.doShake(3.4);
     game.hitStop = Math.max(game.hitStop, 0.08);
@@ -215,7 +215,7 @@ DS.Combat = (function () {
 
     const a = p.aim;
     for (let i = 0; i < 6; i++) {
-      DS.FX.powder(p.x + Math.cos(a) * (6 + i * 5), p.y - 7 + Math.sin(a) * (6 + i * 5), a, 1);
+      DS.FX.powder(p.x + Math.cos(a) * (6 + i * 5), p.y - 11 + Math.sin(a) * (6 + i * 5), a, 1);
     }
     for (const z of game.zombies) {
       if (z.dead) continue;
@@ -227,7 +227,7 @@ DS.Combat = (function () {
       z.vy += Math.sin(za) * 120;
       z.blind(2.6);
       z.stagger(0.5);
-      DS.FX.dmgNum(z.x, z.y - 16, '-', '#dfe9f0');
+      DS.FX.dmgNum(z.x, z.y - 30, '-', '#dfe9f0');
     }
     noise(game, p.x, p.y, 60, 'spray');
     game.toast(`분말 분사 (${slot.charges}회 남음)`, '');

@@ -774,7 +774,7 @@ DS.Game = (function () {
     // 라이팅 — 플레이어 주변 최소 가독광을 더해 암부에서도 실루엣이 보이게
     const p = G.player;
     if (!G.selfLight) G.selfLight = { r: 34, col: '#aebcc6', int: 0.4, kind: 'self' };
-    G.selfLight.x = p.x; G.selfLight.y = p.y - 6;
+    G.selfLight.x = p.x; G.selfLight.y = p.y - 11;
     G.selfLight.int = 0.26 + (1 - U.clamp(G.ambient / 0.5, 0, 1)) * 0.3;
     if (!G.lightList) G.lightList = [];
     G.lightList.length = 0;
@@ -782,7 +782,7 @@ DS.Game = (function () {
     G.lightList.push(G.selfLight);
 
     const cone = p.lightFade > 0.02
-      ? { x: p.x, y: p.y - 7, angle: p.aim, range: 100, spread: 1.05, int: p.lightFade }
+      ? { x: p.x, y: p.y - 11, angle: p.aim, range: 100, spread: 1.05, int: p.lightFade }
       : null;
     DS.FX.renderLights(c, camX, camY, G.ambient, G.lightList, cone, G.time);
 

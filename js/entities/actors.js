@@ -119,7 +119,7 @@
       if (DS.Input.mouse.inside && !DS.Input.touch.active) {
         const wx = DS.Input.mouse.x + game.camera.x;
         const wy = DS.Input.mouse.y + game.camera.y;
-        this.aim = Math.atan2(wy - (this.y - 7), wx - this.x);
+        this.aim = Math.atan2(wy - (this.y - 11), wx - this.x);
       } else if (this.moving) {
         this.aim = Math.atan2(this.vy, this.vx);
       }
@@ -162,10 +162,10 @@
     handPos() {
       const f = this.face;
       const bob = (this.frame === 1 || this.frame === 3) ? -1 : 0;
-      if (f === 'right') return { x: this.x + 5, y: this.y - 7 + bob };
-      if (f === 'left') return { x: this.x - 5, y: this.y - 7 + bob };
-      if (f === 'up') return { x: this.x + 4, y: this.y - 8 + bob };
-      return { x: this.x + 5, y: this.y - 6 + bob };
+      if (f === 'right') return { x: this.x + 6, y: this.y - 9 + bob };
+      if (f === 'left') return { x: this.x - 6, y: this.y - 9 + bob };
+      if (f === 'up') return { x: this.x + 5, y: this.y - 10 + bob };
+      return { x: this.x + 6, y: this.y - 8 + bob };
     }
 
     draw(c, camX, camY, game) {
@@ -174,7 +174,7 @@
 
       // 그림자
       c.fillStyle = 'rgba(0,0,0,0.35)';
-      c.beginPath(); c.ellipse(sx, sy + 1, 5.2, 2.2, 0, 0, 7); c.fill();
+      c.beginPath(); c.ellipse(sx, sy + 1, 6.2, 2.6, 0, 0, 7); c.fill();
 
       // 피격 점멸
       const blink = this.invuln > 0 && (Math.floor(this.invuln * 22) % 2 === 0);
@@ -191,7 +191,7 @@
           ang = this.swing.angle - this.swing.arc / 2 + this.swing.arc * e;
           const rad = 7 + Math.sin(e * Math.PI) * 4;
           hx = sx + Math.cos(ang) * rad;
-          hy = sy - 7 + Math.sin(ang) * rad * 0.8;
+          hy = sy - 11 + Math.sin(ang) * rad * 0.8;
         } else {
           ang = this.face === 'left' ? Math.PI : (this.face === 'up' ? -1.25 : (this.face === 'right' ? 0 : 0.5));
           if (this.face === 'left') { hx = sx - 5; }
@@ -211,7 +211,7 @@
         c.beginPath();
         const e = t < 0.34 ? (t / 0.34) * 0.82 : 0.82 + ((t - 0.34) / 0.66) * 0.18;
         const a0 = this.swing.angle - this.swing.arc / 2;
-        c.arc(sx, sy - 7, w.range * 0.8, a0, a0 + this.swing.arc * e);
+        c.arc(sx, sy - 11, w.range * 0.8, a0, a0 + this.swing.arc * e);
         c.stroke();
         c.restore();
       }
@@ -320,7 +320,7 @@
       if (d > range) return false;
       const a = Math.atan2(p.y - this.y, p.x - this.x);
       if (d > 16 && U.angleDiff(a, this.facingAngle) > this.d.fov / 2) return false;
-      return game.map.hasLOS(this.x, this.y - 6, p.x, p.y - 6);
+      return game.map.hasLOS(this.x, this.y - 10, p.x, p.y - 10);
     }
 
     update(dt, game) {
@@ -495,7 +495,7 @@
 
       // 그림자
       c.fillStyle = 'rgba(0,0,0,0.33)';
-      c.beginPath(); c.ellipse(sx, sy + 1, 5.4, 2.2, 0, 0, 7); c.fill();
+      c.beginPath(); c.ellipse(sx, sy + 1, 6.4, 2.6, 0, 0, 7); c.fill();
 
       const reaching = (this.state === 'attack') || (this.state === 'chase' && U.dist(this.x, this.y, game.player.x, game.player.y) < 26);
       const s = DS.Gfx.person(this.pal, this.face, this.frame, reaching ? 'reach' : 'n');
@@ -524,8 +524,8 @@
         const k = 1 - (this.windupT / this.d.windup);
         c.globalAlpha = 0.35 + 0.5 * k;
         c.fillStyle = '#ff4433';
-        c.fillRect(sx - 2, sy - 17, 1, 1);
-        c.fillRect(sx + 1, sy - 17, 1, 1);
+        c.fillRect(sx - 3, sy - 22, 2, 2);
+        c.fillRect(sx + 1, sy - 22, 2, 2);
         c.globalAlpha = 1;
       }
 
@@ -533,15 +533,15 @@
       if (this.hp < this.hpMax) {
         const w = 11;
         const f = U.clamp(this.hp / this.hpMax, 0, 1);
-        c.fillStyle = 'rgba(0,0,0,0.65)'; c.fillRect(sx - w / 2 - 1, sy - 24, w + 2, 3);
-        c.fillStyle = '#8e1219'; c.fillRect(sx - w / 2, sy - 23, w * f, 1);
-        c.fillStyle = 'rgba(255,255,255,0.25)'; c.fillRect(sx - w / 2, sy - 23, w * f, 1);
+        c.fillStyle = 'rgba(0,0,0,0.65)'; c.fillRect(sx - w / 2 - 1, sy - 32, w + 2, 3);
+        c.fillStyle = '#8e1219'; c.fillRect(sx - w / 2, sy - 31, w * f, 1);
+        c.fillStyle = 'rgba(255,255,255,0.25)'; c.fillRect(sx - w / 2, sy - 31, w * f, 1);
       }
 
       // 경계 상태 표시
       if (this.blindT > 0) {
         c.fillStyle = 'rgba(230,236,240,0.7)';
-        c.fillRect(sx - 3, sy - 19, 7, 1);
+        c.fillRect(sx - 4, sy - 27, 9, 1);
       }
     }
   }
@@ -605,11 +605,11 @@
     draw(c, camX, camY) {
       const sx = Math.round(this.x - camX), sy = Math.round(this.y - camY);
       c.fillStyle = 'rgba(0,0,0,0.33)';
-      c.beginPath(); c.ellipse(sx, sy + 1, 5, 2.1, 0, 0, 7); c.fill();
+      c.beginPath(); c.ellipse(sx, sy + 1, 6, 2.5, 0, 0, 7); c.fill();
       const s = DS.Gfx.person(this.pal, this.face, this.frame, 'n');
       if (this.mode === 'hide') {
         // 웅크림: 아래쪽만 잘라 그려 몸을 낮춘 느낌
-        c.drawImage(s.canvas, 0, 4, s.w, s.h - 4, sx - s.fx, sy - s.fy + 4, s.w, s.h - 4);
+        c.drawImage(s.canvas, 0, 7, s.w, s.h - 7, sx - s.fx, sy - s.fy + 7, s.w, s.h - 7);
       } else {
         c.drawImage(s.canvas, sx - s.fx, sy - s.fy);
       }

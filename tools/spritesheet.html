@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>DEAD:SEOUL — 스프라이트 시트 (아트 확인용)</title>
+<style>
+  body{background:#0b0d10;color:#cfd4da;font:12px/1.5 system-ui,sans-serif;margin:0;padding:20px}
+  h2{font-size:13px;letter-spacing:.1em;color:#8a9298;margin:22px 0 8px;font-weight:600}
+  canvas{image-rendering:pixelated;background:#1a1f26;border:1px solid #232830;display:block}
+  .row{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
+  .cell{text-align:center}
+  .cell span{display:block;margin-top:4px;color:#6a7278;font-size:10px}
+</style>
+</head>
+<body>
+<div id="out"></div>
+
+<script src="../js/core/utils.js"></script>
+<script src="../js/core/gfx.js"></script>
+<script>
+const Z = 5;
+const out = document.getElementById('out');
+const G = DS.Gfx;
+
+function sheet(title, draws) {
+  const h = document.createElement('h2'); h.textContent = title; out.appendChild(h);
+  const row = document.createElement('div'); row.className = 'row';
+  for (const d of draws) {
+    const wrap = document.createElement('div'); wrap.className = 'cell';
+    const cv = document.createElement('canvas');
+    cv.width = G.SW * Z; cv.height = G.SH * Z;
+    const c = cv.getContext('2d'); c.imageSmoothingEnabled = false;
+    c.drawImage(d.canvas, 0, 0, G.SW, G.SH, 0, 0, G.SW * Z, G.SH * Z);
+    // 발 기준선
+    c.fillStyle = 'rgba(90,200,255,0.35)';
+    c.fillRect(0, G.FY * Z, G.SW * Z, 1);
+    wrap.appendChild(cv);
+    const s = document.createElement('span'); s.textContent = d.label; wrap.appendChild(s);
+    row.appendChild(wrap);
+  }
+  out.appendChild(row);
+}
+
+const PALS = ['doyun','minseo','pass_m','pass_f','z_office','z_student','z_elder','z_staff'];
+const DIRS = ['down','side','up'];
+
+// ── 한눈에 보는 라인업 (실루엣 비교용) ──
+sheet('LINEUP — down', PALS.map(p => ({ canvas: G.person(p,'down',0,'n').canvas, label: p })));
+sheet('LINEUP — side', PALS.map(p => ({ canvas: G.person(p,'right',0,'n').canvas, label: p })));
+sheet('LINEUP — up',   PALS.map(p => ({ canvas: G.person(p,'up',0,'n').canvas, label: p })));
+sheet('LINEUP — 좀비 공격자세', PALS.slice(4).map(p => ({ canvas: G.person(p,'down',0,'reach').canvas, label: p }))
+  .concat(PALS.slice(4).map(p => ({ canvas: G.person(p,'right',0,'reach').canvas, label: p+' side' }))));
+
+for (const p of PALS) {
+  const draws = [];
+  for (const dir of DIRS) for (const f of [0,1,2,3]) {
+    const s = G.person(p, dir === 'side' ? 'right' : dir, f, 'n');
+    draws.push({ canvas: s.canvas, label: dir + ' f' + f });
+  }
+  if (PALS.indexOf(p) >= 4) {
+    for (const dir of ['down','right']) {
+      const s = G.person(p, dir, 0, 'reach');
+      draws.push({ canvas: s.canvas, label: dir + ' REACH' });
+    }
+  }
+  const s = G.person(p, 'left', 0, 'n');
+  draws.push({ canvas: s.canvas, label: 'left flip' });
+  const cp = G.corpse(p, 1);
+  draws.push({ canvas: cp.canvas, label: 'corpse' });
+  sheet(p, draws);
+}
+
+// 초상화
+const h = document.createElement('h2'); h.textContent = 'portraits'; out.appendChild(h);
+const prow = document.createElement('div'); prow.className = 'row';
+for (const p of PALS) {
+  const cv = document.createElement('canvas'); cv.width = 72; cv.height = 80;
+  cv.style.width = '144px'; cv.style.height = '160px';
+  G.paintPortrait(cv, p);
+  prow.appendChild(cv);
+}
+out.appendChild(prow);
+
+// 무기
+const h2 = document.createElement('h2'); h2.textContent = 'weapons'; out.appendChild(h2);
+const wrow = document.createElement('div'); wrow.className = 'row';
+for (const id of Object.keys(G.WEAPON_DRAW)) {
+  const wrap = document.createElement('div'); wrap.className = 'cell';
+  const cv = document.createElement('canvas'); cv.width = 44 * Z; cv.height = 24 * Z;
+  const c = cv.getContext('2d'); c.imageSmoothingEnabled = false;
+  c.scale(Z, Z); c.translate(10, 12);
+  G.WEAPON_DRAW[id](c);
+  wrap.appendChild(cv);
+  const sp = document.createElement('span'); sp.textContent = id; wrap.appendChild(sp);
+  wrow.appendChild(wrap);
+}
+out.appendChild(wrow);
+</script>
+</body>
+</html>
